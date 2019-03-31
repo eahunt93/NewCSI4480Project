@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.elijah.chatapp.ProfileActivity">
+
+
+    <ImageView
+
+        android:id="@+id/ProfileImage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_above="@+id/DisplayName"
+        android:src="@drawable/common_google_signin_btn_icon_dark"
+        android:layout_marginTop="20dp"/>
+
+
+    <TextView
+        android:id="@+id/DisplayName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:text="Display Name"
+        android:paddingTop="25dp"
+        android:textSize="24sp" />
+
+    <TextView
+        android:id="@+id/ProfileStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:text="Users current status"
+        android:layout_below="@id/DisplayName"
+        android:textSize="16sp"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="30dp"
+        android:layout_marginRight="30dp"/>
+
+
+    <RelativeLayout
+        android:layout_alignParentBottom="true"
+        android:layout_below="@+id/ProfileStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true">
+        <Button
+            android:id="@+id/FriendRequestbtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:layout_centerHorizontal="true"
+            android:text="Send Friend Request"
+            android:layout_above="@+id/DeclineFriendRequestbtn"
+            />
+
+        <Button
+            android:id="@+id/DeclineFriendRequestbtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:text="Decline Friend request"
+            android:layout_alignParentBottom="true"
+            />
+
+        <TextView
+            android:id="@+id/TotalFriends"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/FriendRequestbtn"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="10dp"
+            android:text="Total Friends" />
+
+
+
+    </RelativeLayout>
+
+
+
+
+</RelativeLayout>
