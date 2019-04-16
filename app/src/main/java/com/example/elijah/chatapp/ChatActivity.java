@@ -51,16 +51,16 @@ import javax.crypto.SecretKey;
 import de.hdodenhof.circleimageview.CircleImageView;
 
 public class ChatActivity extends AppCompatActivity {
-    private String mChatUser;
-    private Toolbar mChatToolbar;
+    private String User;
+    private Toolbar Toolbar;
 
-    private DatabaseReference mRootRef;
+    private DatabaseReference Ref;
 
-    private TextView mTitleView;
-    private TextView mLastSeenView;
-    private CircleImageView mProfileImage;
-    private FirebaseAuth mAuth;
-    private String mCurrentUserId;
+    private TextView TitleView;
+    private TextView LastSeenView;
+    private CircleImageView ProfileImage;
+    private FirebaseAuth Auth;
+    private String CurrentUserId;
 
     private Button mChatAddBtn;
     private Button mChatSendBtn;
@@ -93,7 +93,7 @@ public class ChatActivity extends AppCompatActivity {
     SecretKey uAesKey = null;
 
 
-    //New Solution
+
     private int itemPos = 0;
 
     private String mLastKey = "";
@@ -108,38 +108,43 @@ public class ChatActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
-        mChatToolbar = (Toolbar) findViewById(R.id.chat_app_bar);
-        setSupportActionBar(mChatToolbar);
+        Toolbar = (Toolbar) findViewById(R.id.chat_app_bar);
+        setSupportActionBar(Toolbar);
 
         ActionBar actionBar = getSupportActionBar();
 
         actionBar.setDisplayHomeAsUpEnabled(true);
         actionBar.setDisplayShowCustomEnabled(true);
 
-        mRootRef = FirebaseDatabase.getInstance().getReference();
-        mAuth = FirebaseAuth.getInstance();
-        mCurrentUserId = mAuth.getCurrentUser().getUid();
+        Ref = FirebaseDatabase.getInstance().getReference();
+        Auth = FirebaseAuth.getInstance();
+        CurrentUserId = Auth.getCurrentUser().getUid();
 
-        mChatUser = getIntent().getStringExtra("user_id");
+        //Getting friend information from the FriendsFragment
+        User = getIntent().getStringExtra("user_id");
         String userName = getIntent().getStringExtra("user_name");
         String PublicKey = getIntent().getStringExtra("pubKey");
 
 
+        //front end stuff
         LayoutInflater inflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         View action_bar_view = inflater.inflate(R.layout.chat_custom_bar, null);
 
         actionBar.setCustomView(action_bar_view);
 
-        // ---- Custom Action bar Items ----
 
-        mTitleView = (TextView) findViewById(R.id.custom_bar_title);
-        mLastSeenView = (TextView) findViewById(R.id.custom_bar_seen);
-        mProfileImage = (CircleImageView) findViewById(R.id.custom_bar_image);
 
+        //menu bar stuff
+        TitleView = (TextView) findViewById(R.id.custom_bar_title);
+        LastSeenView = (TextView) findViewById(R.id.custom_bar_seen);
+        ProfileImage = (CircleImageView) findViewById(R.id.custom_bar_image);
+
+        //getting variables for UI
         mChatAddBtn = (Button) findViewById(R.id.chat_add_btn);
         mChatSendBtn = (Button) findViewById(R.id.chat_send_btn);
         mChatMessageView = (EditText) findViewById(R.id.chat_message_view);
 
+        //creating message adapter
         mAdapter = new MessageAdapter(messagesList);
 
         mMessagesList = (RecyclerView) findViewById(R.id.messages_list);
@@ -151,29 +156,33 @@ public class ChatActivity extends AppCompatActivity {
 
         mMessagesList.setAdapter(mAdapter);
 
-        //------- IMAGE STORAGE ---------
+        //image storage.
         mImageStorage = FirebaseStorage.getInstance().getReference();
 
-        mRootRef.child("Chat").child(mCurrentUserId).child(mChatUser).child("seen").setValue(true);
+        //setting the user seen status to true on firebase
+        Ref.child("Chat").child(CurrentUserId).child(User).child("seen").setValue(true);
 
+        //loads all messages between friend and user
         loadMessages();
 
-        mTitleView.setText(userName);
+        //Adds the friends name to the title
+        TitleView.setText(userName);
 
+        //After we get the friends public key from the FriendsFragment we need to put in back in public key form.
         publicKey = null;
         try {
-            publicKey=   Cryptography.loadPublicKey(PublicKey);
-            Log.e("PublicKey", publicKey.toString());
+            publicKey=   DHcryptography.loadPublicKey(PublicKey);
+            Log.e(userName + "s public Key", publicKey.toString());
         } catch (GeneralSecurityException e) {
             e.printStackTrace();
         }
+        //We retrieve our private key from the private file we stored it in when we signed up
         FileInputStream fin = null;
         try {
             fin = openFileInput("PrivateKeyFile");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-
         int c;
         String temp="";
         try {
@@ -184,21 +193,24 @@ public class ChatActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        //We  then load the private key back into its original format
         priveKey = temp;
         privateKey = null;
         try {
-          privateKey =  Cryptography.loadPrivateKey(temp);
-          Log.e("PrivateKey", privateKey.toString());
+          privateKey =  DHcryptography.loadPrivateKey(temp);
+          Log.e("My Private Key", privateKey.toString());
         } catch (GeneralSecurityException e) {
             e.printStackTrace();
         }
+        //we tpass our private key and the other users public key to create an AES key.
           uAesKey = DHcryptography.generateAESKey(privateKey, publicKey);
-        Log.e("AES SEcret Key", uAesKey.toString());
+        Log.e("Generated AES key", uAesKey.toString());
 
 
 
 
-        mRootRef.child("Users").child(mChatUser).addValueEventListener(new ValueEventListener() {
+
+        Ref.child("Users").child(User).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
 
@@ -214,17 +226,18 @@ public class ChatActivity extends AppCompatActivity {
                 }
 
 
-                Picasso.with(getBaseContext()).load(image).placeholder(R.drawable.common_google_signin_btn_icon_light).into(mProfileImage);
+                //https://square.github.io/picasso/
+                Picasso.with(getBaseContext()).load(image).placeholder(R.drawable.common_google_signin_btn_icon_light).into(ProfileImage);
 
                 if(online.equals("true")) {
 
-                    mLastSeenView.setText("Online");
+                    LastSeenView.setText("Online");
 
                 } else  {
                     GetTimeAgo getTimeAgo = new GetTimeAgo();
                     long lastTime = Long.parseLong(online);
                     String lastSeenTime = getTimeAgo.getTimeAgo(lastTime, getApplicationContext());
-                    mLastSeenView.setText(lastSeenTime);
+                    LastSeenView.setText(lastSeenTime);
 
                 }
 
@@ -240,20 +253,20 @@ public class ChatActivity extends AppCompatActivity {
 
 
 
-        mRootRef.child("Chat").child(mCurrentUserId).addValueEventListener(new ValueEventListener() {
+        Ref.child("Chat").child(CurrentUserId).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
 
-                if(!dataSnapshot.hasChild(mChatUser)){
+                if(!dataSnapshot.hasChild(User)){
                     Map chatAddMap = new HashMap();
                     chatAddMap.put("seen", false);
                     chatAddMap.put("timestamp", ServerValue.TIMESTAMP);
 
                     Map chatUserMap = new HashMap();
-                    chatUserMap.put("Chat/" + mCurrentUserId + "/" + mChatUser, chatAddMap);
-                    chatUserMap.put("Chat/" + mChatUser + "/" + mCurrentUserId, chatAddMap);
+                    chatUserMap.put("Chat/" + CurrentUserId + "/" + User, chatAddMap);
+                    chatUserMap.put("Chat/" + User + "/" + CurrentUserId, chatAddMap);
 
-                    mRootRef.updateChildren(chatUserMap, new DatabaseReference.CompletionListener() {
+                    Ref.updateChildren(chatUserMap, new DatabaseReference.CompletionListener() {
                         @Override
                         public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
 
@@ -302,6 +315,8 @@ public class ChatActivity extends AppCompatActivity {
 
                startActivityForResult(Intent.createChooser(galleryIntent, "SELECT IMAGE"), GALLERY_PICK);
 
+
+
             }
         });
 
@@ -331,14 +346,18 @@ public class ChatActivity extends AppCompatActivity {
 
         if(requestCode == GALLERY_PICK && resultCode == RESULT_OK){
 
+
             Uri imageUri = data.getData();
-            Log.e("Image URI", imageUri.toString());
 
-            final String current_user_ref = "messages/" + mCurrentUserId + "/" + mChatUser;
-            final String chat_user_ref = "messages/" + mChatUser + "/" + mCurrentUserId;
+            Log.e("URI", imageUri.toString());
 
-            DatabaseReference user_message_push = mRootRef.child("messages")
-                    .child(mCurrentUserId).child(mChatUser).push();
+
+
+            final String current_user_ref = "messages/" + CurrentUserId + "/" + User;
+            final String chat_user_ref = "messages/" + User + "/" + CurrentUserId;
+
+            DatabaseReference user_message_push = Ref.child("messages")
+                    .child(CurrentUserId).child(User).push();
 
             final String push_id = user_message_push.getKey();
 
@@ -354,20 +373,22 @@ public class ChatActivity extends AppCompatActivity {
                         String download_url = task.getResult().getDownloadUrl().toString();
 
 
+
                         Map messageMap = new HashMap();
                         messageMap.put("message", download_url);
                         messageMap.put("seen", false);
                         messageMap.put("type", "image");
                         messageMap.put("time", ServerValue.TIMESTAMP);
-                        messageMap.put("from", mCurrentUserId);
+                        messageMap.put("from", CurrentUserId);
 
                         Map messageUserMap = new HashMap();
                         messageUserMap.put(current_user_ref + "/" + push_id, messageMap);
                         messageUserMap.put(chat_user_ref + "/" + push_id, messageMap);
 
+
                         mChatMessageView.setText("");
 
-                        mRootRef.updateChildren(messageUserMap, new DatabaseReference.CompletionListener() {
+                        Ref.updateChildren(messageUserMap, new DatabaseReference.CompletionListener() {
                             @Override
                             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
 
@@ -392,7 +413,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private void loadMoreMessages() {
 
-        DatabaseReference messageRef = mRootRef.child("messages").child(mCurrentUserId).child(mChatUser);
+        DatabaseReference messageRef = Ref.child("messages").child(CurrentUserId).child(User);
 
         Query messageQuery = messageRef.orderByKey().endAt(mLastKey).limitToLast(10);
 
@@ -457,8 +478,8 @@ public class ChatActivity extends AppCompatActivity {
 
     private void loadMessages() {
 
-        DatabaseReference messageRef = mRootRef.child("messages").child(mCurrentUserId).child(mChatUser);
-        final DatabaseReference mPubKeyRef = mRootRef.child("Users").child("PublicKey");
+        DatabaseReference messageRef = Ref.child("messages").child(CurrentUserId).child(User);
+        final DatabaseReference mPubKeyRef = Ref.child("Users").child("PublicKey");
 
         Query messageQuery = messageRef.limitToLast(mCurrentPage * TOTAL_ITEMS_TO_LOAD);
 
@@ -470,7 +491,10 @@ public class ChatActivity extends AppCompatActivity {
 
                 final Messages message = dataSnapshot.getValue(Messages.class);
 
-                message.setMessage(DHcryptography.decrypt(message.getMessage(), uAesKey));
+
+                if(message.getType().equals("text")) {
+                    message.setMessage(DHcryptography.decrypt(message.getMessage(), uAesKey));
+                }
 
                 itemPos++;
                 if(itemPos == 1){
@@ -484,7 +508,7 @@ public class ChatActivity extends AppCompatActivity {
                 messagesList.add(message);
                 mAdapter.notifyDataSetChanged();
 
-                mMessagesList.scrollToPosition(messagesList.size() - 1);
+                mMessagesList.scrollToPosition(messagesList.size()-1);
 
                 mRefreshLayout.setRefreshing(false);
 
@@ -516,21 +540,19 @@ public class ChatActivity extends AppCompatActivity {
 
     private void sendMessage() throws Exception {
 
-        Log.e("SendMessageAES", uAesKey.toString());
 
         String message = mChatMessageView.getText().toString();
         String encrypted = DHcryptography.encrypt(message,uAesKey);
-        Log.e("EncryptedMessage", encrypted);
 
 
 
         if(!TextUtils.isEmpty(message)){
             Log.e("PlainText", message);
-            String current_user_ref = "messages/" + mCurrentUserId + "/" + mChatUser;
-            String chat_user_ref = "messages/" + mChatUser + "/" + mCurrentUserId;
+            String current_user_ref = "messages/" + CurrentUserId + "/" + User;
+            String chat_user_ref = "messages/" + User + "/" + CurrentUserId;
 
-            DatabaseReference user_message_push = mRootRef.child("messages")
-                    .child(mCurrentUserId).child(mChatUser).push();
+            DatabaseReference user_message_push = Ref.child("messages")
+                    .child(CurrentUserId).child(User).push();
 
             String push_id = user_message_push.getKey();
 
@@ -539,7 +561,7 @@ public class ChatActivity extends AppCompatActivity {
             messageMap.put("seen", false);
             messageMap.put("type", "text");
             messageMap.put("time", ServerValue.TIMESTAMP);
-            messageMap.put("from", mCurrentUserId);
+            messageMap.put("from", CurrentUserId);
 
 
 
@@ -551,13 +573,13 @@ public class ChatActivity extends AppCompatActivity {
 
             mChatMessageView.setText("");
 
-            mRootRef.child("Chat").child(mCurrentUserId).child(mChatUser).child("seen").setValue(true);
-            mRootRef.child("Chat").child(mCurrentUserId).child(mChatUser).child("timestamp").setValue(ServerValue.TIMESTAMP);
+            Ref.child("Chat").child(CurrentUserId).child(User).child("seen").setValue(true);
+            Ref.child("Chat").child(CurrentUserId).child(User).child("timestamp").setValue(ServerValue.TIMESTAMP);
 
-            mRootRef.child("Chat").child(mChatUser).child(mCurrentUserId).child("seen").setValue(false);
-            mRootRef.child("Chat").child(mChatUser).child(mCurrentUserId).child("timestamp").setValue(ServerValue.TIMESTAMP);
+            Ref.child("Chat").child(User).child(CurrentUserId).child("seen").setValue(false);
+            Ref.child("Chat").child(User).child(CurrentUserId).child("timestamp").setValue(ServerValue.TIMESTAMP);
 
-            mRootRef.updateChildren(messageUserMap, new DatabaseReference.CompletionListener() {
+            Ref.updateChildren(messageUserMap, new DatabaseReference.CompletionListener() {
                 @Override
                 public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
 
@@ -572,6 +594,7 @@ public class ChatActivity extends AppCompatActivity {
 
         }
     }
+
 
 
 }

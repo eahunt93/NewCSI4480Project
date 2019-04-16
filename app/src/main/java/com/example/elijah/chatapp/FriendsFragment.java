@@ -33,21 +33,21 @@ import de.hdodenhof.circleimageview.CircleImageView;
  */
 public class FriendsFragment extends Fragment {
 
-    private RecyclerView mFriendsList;
+    private RecyclerView FriendsList;
 
-    private DatabaseReference mFriendsDatabase;
-    private DatabaseReference mUsersDatabase;
+    private DatabaseReference FriendsDatabase;
+    private DatabaseReference UsersDatabase;
 
 
 
-    private FirebaseAuth mAuth;
+    private FirebaseAuth Auth;
 
-    private String mCurrent_user_id;
+    private String Current_user_id;
 
-    private View mMainView;
+    private View MainView;
 
     public FriendsFragment() {
-        // Required empty public constructor
+
     }
 
 
@@ -55,30 +55,30 @@ public class FriendsFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        mMainView = inflater.inflate(R.layout.fragment_friends, container, false);
+        MainView = inflater.inflate(R.layout.fragment_friends, container, false);
 
-        mFriendsList = (RecyclerView) mMainView.findViewById(R.id.friendsList);
-        mAuth = FirebaseAuth.getInstance();
+        FriendsList = (RecyclerView) MainView.findViewById(R.id.friendsList);
+        Auth = FirebaseAuth.getInstance();
 
-        mCurrent_user_id = mAuth.getCurrentUser().getUid();
+        Current_user_id = Auth.getCurrentUser().getUid();
 
-        if(mCurrent_user_id.equals(null)){
+        if(Current_user_id.equals(null)){
             Log.e("Equals null", "Something is wronf");
         }else{
-            Log.e("not Equals null", mCurrent_user_id);
+            Log.e("not Equals null", Current_user_id);
         }
 
-        mFriendsDatabase = FirebaseDatabase.getInstance().getReference().child("Friends").child(mCurrent_user_id);
-        mFriendsDatabase.keepSynced(true);
-        mUsersDatabase = FirebaseDatabase.getInstance().getReference().child("Users");
-        mUsersDatabase.keepSynced(true);
+        FriendsDatabase = FirebaseDatabase.getInstance().getReference().child("Friends").child(Current_user_id);
+        FriendsDatabase.keepSynced(true);
+        UsersDatabase = FirebaseDatabase.getInstance().getReference().child("Users");
+        UsersDatabase.keepSynced(true);
 
 
-        mFriendsList.setHasFixedSize(true);
-        mFriendsList.setLayoutManager(new LinearLayoutManager(getContext()));
+        FriendsList.setHasFixedSize(true);
+        FriendsList.setLayoutManager(new LinearLayoutManager(getContext()));
 
         // Inflate the layout for this fragment
-        return mMainView;
+        return MainView;
     }
 
 
@@ -87,15 +87,17 @@ public class FriendsFragment extends Fragment {
         super.onStart();
 
 
+        //Setting the adapter view for the
         FirebaseRecyclerAdapter<Friends, FriendsViewHolder> friendsRecyclerViewAdapter = new FirebaseRecyclerAdapter<Friends, FriendsViewHolder>(
 
                 Friends.class,
                 R.layout.users_single_layout,
                 FriendsViewHolder.class,
-                mFriendsDatabase
+                FriendsDatabase
 
 
         ) {
+            //adds friends to recycler view
             @Override
             protected void populateViewHolder(final FriendsViewHolder friendsViewHolder, Friends friends, int i) {
 
@@ -104,9 +106,10 @@ public class FriendsFragment extends Fragment {
                 final String list_user_id = getRef(i).getKey();
 
 
-                mUsersDatabase.child(list_user_id).addValueEventListener(new ValueEventListener() {
+                UsersDatabase.child(list_user_id).addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
+
 
                         final String userName = dataSnapshot.child("name").getValue().toString();
                         String userThumb = dataSnapshot.child("thumb_image").getValue().toString();
@@ -122,12 +125,13 @@ public class FriendsFragment extends Fragment {
                         friendsViewHolder.setName(userName);
                         friendsViewHolder.setUserImage(userThumb, getContext());
 
+                        //When the user selects a friend, go into this method.
                         friendsViewHolder.mView.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View view) {
 
+                                //Create dialog box. user will select either open profile or send message
                                 CharSequence options[] = new CharSequence[]{"Open Profile", "Send message"};
-
                                 final AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
 
                                 builder.setTitle("Select Options");
@@ -137,6 +141,7 @@ public class FriendsFragment extends Fragment {
 
                                         //Click Event for each item.
                                         //Add switch statement later!
+                                        //Never got to switch statement
                                         if(i == 0){
 
                                             Intent profileIntent = new Intent(getContext(), ProfileActivity.class);
@@ -145,13 +150,15 @@ public class FriendsFragment extends Fragment {
 
                                         }
 
+                                        //When the user selects "send message on the dialog box, it starts an intent for the ChatAvivity.java".
+                                        //Retreaves user information, including public key to bring over to the Chat Activity.
                                         if(i == 1){
 
                                             Intent chatIntent = new Intent(getContext(), ChatActivity.class);
                                             chatIntent.putExtra("user_id", list_user_id);
                                             chatIntent.putExtra("user_name", userName);
                                             chatIntent.putExtra("pubKey", publicKey);
-                                            Log.e("pubkey", publicKey);
+                                            Log.e(userName + " public key", publicKey);
                                             startActivity(chatIntent);
 
                                         }
@@ -176,7 +183,7 @@ public class FriendsFragment extends Fragment {
             }
         };
 
-        mFriendsList.setAdapter(friendsRecyclerViewAdapter);
+        FriendsList.setAdapter(friendsRecyclerViewAdapter);
 
 
     }
@@ -209,11 +216,13 @@ public class FriendsFragment extends Fragment {
 
         public void setUserImage(String thumb_image, Context ctx){
 
+            //Using piccasso from https://square.github.io/picasso/ to set the circle images
             CircleImageView userImageView = (CircleImageView) mView.findViewById(R.id.image);
             Picasso.with(ctx).load(thumb_image).placeholder(R.drawable.common_google_signin_btn_icon_light).into(userImageView);
 
         }
 
+        //Setting user online. not very important.
         public void setUserOnline(String online_status) {
 
             TextView userOnlineView = (TextView) mView.findViewById(R.id.user_single_online_icon);

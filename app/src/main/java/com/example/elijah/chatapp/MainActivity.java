@@ -1,10 +1,13 @@
 package com.example.elijah.chatapp;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.TabLayout;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -12,10 +15,9 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ServerValue;
 
 public class MainActivity extends AppCompatActivity {
-    private FirebaseAuth mAuth;
+    private FirebaseAuth Auth;
     private android.support.v7.widget.Toolbar toolbar;
     private ViewPager viewPager;
     private SectionsPagerAdapter sectionsPagerAdapter;
@@ -25,21 +27,28 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mAuth = FirebaseAuth.getInstance();
 
-        toolbar = (android.support.v7.widget.Toolbar)findViewById(R.id.main_page_toolbar);
+
+        Auth = FirebaseAuth.getInstance();
+
+        toolbar = (Toolbar)findViewById(R.id.main_page_toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setTitle("ChatApp");
+        getSupportActionBar().setTitle("EllipticCurveChatApp");
 
-        if(mAuth.getCurrentUser() != null) {
-            userRef = FirebaseDatabase.getInstance().getReference().child("Users").child(mAuth.getCurrentUser().getUid());
+        //If user is signed in get their user ID. Else send them to the start activity
+        if(Auth.getCurrentUser() != null) {
+            userRef = FirebaseDatabase.getInstance().getReference().child("Users").child(Auth.getCurrentUser().getUid());
         }else{
             sendToStart();
         }
+
+
+
 
 
 
@@ -55,8 +64,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        // Check if user is signed in (non-null) and update UI accordingly.
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        // Check if user is signed in
+        FirebaseUser currentUser = Auth.getCurrentUser();
 
         if(currentUser ==null){
             sendToStart();
@@ -68,13 +77,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if(currentUser != null) {
-            userRef.child("online").setValue(ServerValue.TIMESTAMP);
-        }
+        FirebaseUser currentUser = Auth.getCurrentUser();
 
     }
 
+    //Method to send user to start
     private void sendToStart() {
         Intent StartIntent = new Intent(MainActivity.this, StartActivity.class);
         startActivity(StartIntent);

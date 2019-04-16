@@ -4,8 +4,10 @@ import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.design.widget.TextInputLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -29,25 +31,15 @@ import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.spec.ECGenParameterSpec;
 import java.util.HashMap;
-
-import javax.crypto.KeyAgreement;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 public class RegisterActivity extends AppCompatActivity {
     private TextInputLayout DisplayName, Email, Password;
     private Button createB;
-    private FirebaseAuth mAuth;
+    private FirebaseAuth Auth;
 
     private Toolbar toolbar;
     private ProgressDialog progressDialog;
@@ -68,7 +60,7 @@ public class RegisterActivity extends AppCompatActivity {
         progressDialog = new ProgressDialog(this);
 
 
-        mAuth = FirebaseAuth.getInstance();
+        Auth = FirebaseAuth.getInstance();
 
         DisplayName = (TextInputLayout) findViewById(R.id.reg_displayName);
         Email = (TextInputLayout) findViewById(R.id.reg_email);
@@ -77,96 +69,8 @@ public class RegisterActivity extends AppCompatActivity {
 
 
 
-        KeyPairGenerator kpg = null;
-        try {
-            kpg = KeyPairGenerator.getInstance("EC","BC");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchProviderException e) {
-            e.printStackTrace();
-        }
-        ECGenParameterSpec ecsp;
-
-        ecsp = new ECGenParameterSpec("secp192k1");
-        try {
-            kpg.initialize(ecsp);
-        } catch (InvalidAlgorithmParameterException e) {
-            e.printStackTrace();
-        }
-        final KeyPair kpU = kpg.genKeyPair();
-        PrivateKey privKeyU = kpU.getPrivate();
-        PublicKey pubKeyU = kpU.getPublic();
-        Log.e("User U: " , privKeyU.toString());
-        Log.e("User U: " , pubKeyU.toString());
-        System.out.println("User U: " + privKeyU.toString());
-        System.out.println("User U: " + pubKeyU.toString());
-
-
-        KeyPair kpV = kpg.genKeyPair();
-        PrivateKey privKeyV = kpV.getPrivate();
-        PublicKey pubKeyV = kpV.getPublic();
-        Log.e("User v: " , privKeyV.toString());
-        Log.e("User v: " , pubKeyV.toString());
-        System.out.println("User V: " + privKeyV.toString());
-        System.out.println("User V: " + pubKeyV.toString());
-
-        KeyAgreement ecdhU = null;
-        try {
-            ecdhU = KeyAgreement.getInstance("ECDH");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        try {
-            ecdhU.init(privKeyU);
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        }
-        try {
-            ecdhU.doPhase(pubKeyV,true);
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        }
-
-        KeyAgreement ecdhV = null;
-        try {
-            ecdhV = KeyAgreement.getInstance("ECDH");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        try {
-            ecdhV.init(privKeyV);
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        }
-        try {
-            ecdhV.doPhase(pubKeyU,true);
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        }
-
-        final SecretKey uAesKey = new SecretKeySpec(ecdhU.generateSecret(),0,16,"AES");
-        SecretKey vAesKey = new SecretKeySpec(ecdhV.generateSecret(),0,16,"AES");
-
-
-
-        Log.e("AES U", uAesKey.getEncoded().toString());
-        Log.e("AES V", vAesKey.getEncoded().toString());
-
-        String plaintext = "Hello, its eli. will you please fucking encrypt already.";
-
-
-        String encryptedText= DHcryptography.encrypt(plaintext,uAesKey);
-
-        Log.e("Encrypted Text", encryptedText);
-
-        String decryptedText = DHcryptography.decrypt(encryptedText,uAesKey);
-        Log.e("Decrypted Text", decryptedText);
-
-        String idk = "";
-
-
-
         createB.setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onClick(View view) {
                 String display_name = DisplayName.getEditText().getText().toString();
@@ -175,65 +79,84 @@ public class RegisterActivity extends AppCompatActivity {
 
                 if(!TextUtils.isEmpty(display_name) || !TextUtils.isEmpty(email) || !TextUtils.isEmpty(password)) {
 
+
+                    //When the user signs in we generate the key pair using methods from the DHcryptography.java class.
                     KeyPair keyPair = DHcryptography.generateKeypair();
                     PrivateKey privKey = keyPair.getPrivate();
                     PublicKey pubKey = keyPair.getPublic();
-                    Log.e("User U: " , privKey.toString());
-                    Log.e("User U: " , pubKey.toString());
-                    System.out.println("User U: " + privKey.toString());
-                    System.out.println("User U: " + pubKey.toString());
+                    //Print the private key and public key to error logs.
+                    Log.e("Your private Key: " , privKey.toString());
+                    Log.e("Your Public Key: " , pubKey.toString());
 
+
+                    //Saving the private key.
                     String filename = "PrivateKeyFile";
                     String fileContents = null;
                     try {
-                        fileContents = Cryptography.savePrivateKey(kpU.getPrivate());
+                        fileContents = Cryptography.savePrivateKey(privKey);
                     } catch (GeneralSecurityException e) {
                         e.printStackTrace();
                     }
                     FileOutputStream outputStream;
 
                     try {
+                        //Saving private key to private file.
+                        //https://stackoverflow.com/questions/41301511/how-to-create-hidden-directory-in-android
+                        //Quote from stack overflow
+                        // "You can save files directly on the device's internal storage. By default, files saved to the
+                        // internal storage are private to your application and other applications cannot access them (nor can the user).
+                        // When the user uninstalls your application, these files are removed."
                         outputStream = openFileOutput(filename, Context.MODE_PRIVATE);
                         outputStream.write(fileContents.getBytes());
                         outputStream.close();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
+                    Log.e("Saving Private Key", "Private Key saved");
 
 
+                    //Progress dialog.
                     progressDialog.setTitle("Registering User");
                     progressDialog.setMessage("Please wait while we create your account");
                     progressDialog.setCanceledOnTouchOutside(false);
                     progressDialog.show();
-                    registerUser(display_name, email, password,kpU.getPublic());
+                    //Pass in information including publickey to register.
+                    registerUser(display_name, email, password,pubKey);
                 }
             }
         });
     }
 
+    //Method to register the user.
     private void registerUser(final String display_name, String email, String password, final PublicKey publickey) {
-        mAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+        //After passing in the information we connect to firebase and use firebase methods to authenticate our new user.
+        Auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
             @Override
             public void onComplete(@NonNull Task<AuthResult> task) {
                 Log.e("Success?", String.valueOf(task.isSuccessful()));
+
+                //If it is successful we get their user ID.
                 if(task.isSuccessful()){
 
                     FirebaseUser firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
                     String uid = firebaseUser.getUid();
                     String publicKey = "";
 
+                    //Turn public key into a string of bytes using the DHcryptography.java class
                     try {
-                        publicKey = Cryptography.savePublicKey(publickey);
+                        publicKey = DHcryptography.savePublicKey(publickey);
                     } catch (GeneralSecurityException e) {
                         e.printStackTrace();
                     }
 
 
+                    //Get the users device token.
                     database = FirebaseDatabase.getInstance().getReference().child("Users").child(uid);
                     String device_token = FirebaseInstanceId.getInstance().getToken();
 
 
 
+                    //figured out how to do this after watching this youtube video https://www.youtube.com/watch?v=iA-w8yFx0qw
                     HashMap<String, String> usermap = new HashMap<String, String>();
                     usermap.put("name",display_name);
                     usermap.put("status", "Hi there. this is a default status. Change it");
